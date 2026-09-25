@@ -1,0 +1,27 @@
+name: graft
+description: A Zimbabwean hyperlocal services marketplace connecting customers with workers.
+publish: false
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: YoungSerif
+      fonts:
+        - asset: assets/fonts/Young_Serif/YoungSerif-Regular.ttf
+  assets:
+    - assets/
