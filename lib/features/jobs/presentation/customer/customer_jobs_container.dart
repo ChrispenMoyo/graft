@@ -3,9 +3,10 @@
 // to the job repository
 
 import 'package:flutter/material.dart';
+import '../../../../../core/design_tokens/design_tokens.dart';
 import '../../../../../core/session/session_manager.dart';
-import '../../../../../core/widgets/loading_state.dart';
 import '../../../../../core/widgets/error_state.dart';
+import '../../../../../core/widgets/skeleton.dart';
 import '../../../../../core/widgets/snackbar.dart';
 import '../../../../../models/job.dart';
 import '../../data/repositories/job_repository.dart';
@@ -102,8 +103,21 @@ class _CustomerJobsContainerState extends State<CustomerJobsContainer> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: LoadingState(message: 'Loading your jobs...'),
+      // Skeleton job cards instead of a frozen spinner (spec §15)
+      return Scaffold(
+        appBar: AppBar(title: const Text('My Jobs'), leading: const SizedBox.shrink()),
+        body: const SingleChildScrollView(
+          padding: EdgeInsets.all(GraftSpacing.lg),
+          child: Column(
+            children: [
+              SkeletonJobCard(),
+              SizedBox(height: GraftSpacing.md),
+              SkeletonJobCard(),
+              SizedBox(height: GraftSpacing.md),
+              SkeletonJobCard(),
+            ],
+          ),
+        ),
       );
     }
     if (_hasError) {

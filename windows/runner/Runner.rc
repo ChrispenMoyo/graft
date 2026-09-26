@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "graft" "\0"
+            VALUE "FileDescription", "GRAFT" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "graft" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "graft.exe" "\0"
-            VALUE "ProductName", "graft" "\0"
+            VALUE "ProductName", "GRAFT" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -28,12 +28,17 @@ class PostJobFlow extends StatefulWidget {
   /// (e.g. typed on the customer home screen)
   final String? initialDescription;
 
+  /// Optional category chosen before the flow was opened
+  /// (e.g. tapping a category tile on the customer home screen)
+  final JobCategoryEnum? initialCategory;
+
   const PostJobFlow({
     super.key,
     this.customerId,
     this.workerId,
     this.onJobPosted,
     this.initialDescription,
+    this.initialCategory,
   });
 
   /// Creates PostJobFlow with the current session user as the job owner
@@ -69,6 +74,7 @@ class _PostJobFlowState extends State<PostJobFlow> {
       description: (initialDescription != null && initialDescription.isNotEmpty)
           ? initialDescription
           : null,
+      category: widget.initialCategory?.label,
     );
   }
 
@@ -217,6 +223,12 @@ class _PostJobFlowState extends State<PostJobFlow> {
     }
     // Category screen - first step of the flow
     return PostJobCategoryScreen(
+      initialCategory: _draft.category != null
+          ? JobCategoryEnum.values.firstWhere(
+              (c) => c.label == _draft.category,
+              orElse: () => JobCategoryEnum.other,
+            )
+          : null,
       onCategorySelected: (category) {
         _updateDraft(_draft.copyWith(category: category.label));
         _navigateToNextScreen(

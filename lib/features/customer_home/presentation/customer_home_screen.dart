@@ -1,5 +1,8 @@
-// GRAFT Customer Home Foundation
-// Customer-facing landing page with job creation focus
+// GRAFT Customer Home
+// Task-first marketplace home (spec §3): a time-aware greeting, the
+// primary question, the two primary actions, popular categories and
+// the customer's active jobs. The customer never has to dig through
+// screens to post a job - it is the first thing on the page.
 
 import 'package:flutter/material.dart';
 import 'package:graft/features/jobs/presentation/post_job/post_job_flow.dart';
@@ -8,15 +11,18 @@ import '../../../core/session/session_manager.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/forms.dart';
+import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/job_visuals.dart';
 import '../../../core/widgets/graft_logo.dart';
 import '../../../core/widgets/snackbar.dart';
+import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/trust_components.dart';
 import '../../../features/jobs/data/repositories/job_repository.dart';
 import '../../../features/jobs/presentation/customer/customer_job_detail_screen.dart';
 import '../../../models/job.dart';
+import '../../../models/job_category.dart';
 
 /// Customer Home Screen
-/// Shows "What do you need done?" with job creation and activity feeds
 class CustomerHomeScreen extends StatefulWidget {
   /// Called when the user wants to see all their jobs (e.g. switch to Jobs tab)
   final VoidCallback? onViewAllJobs;
@@ -35,20 +41,9 @@ class CustomerHomeScreen extends StatefulWidget {
 }
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
-  final TextEditingController _descriptionController = TextEditingController();
-
   bool _isLoadingJobs = true;
+  bool _hasError = false;
   List<Job> _myJobs = [];
-
-  // Sample categories for the demo
-  static const List<Map<String, dynamic>> _popularCategories = [
-    {'id': 'gardening', 'name': 'Gardening', 'icon': Icons.local_florist},
-    {'id': 'plumbing', 'name': 'Plumbing', 'icon': Icons.plumbing},
-    {'id': 'electrical', 'name': 'Electrical', 'icon': Icons.electric_meter},
-    {'id': 'cleaning', 'name': 'Cleaning', 'icon': Icons.cleaning_services},
-    {'id': 'carpentry', 'name': 'Carpentry', 'icon': Icons.house},
-    {'id': 'painting', 'name': 'Painting', 'icon': Icons.brush},
-  ];
 
   @override
   void initState() {
@@ -64,14 +59,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _descriptionController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadMyJobs() async {
-    setState(() => _isLoadingJobs = true);
+    setState(() {
+      _isLoadingJobs = true;
+      _hasError = false;
+    });
     try {
       final jobs = await ServiceLocator.jobRepository
           .getCustomerJobs(SessionManager.instance.customerId);
@@ -82,17 +74,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoadingJobs = false);
+      setState(() {
+        _hasError = true;
+        _isLoadingJobs = false;
+      });
     }
   }
 
-  void _openPostFlow({String? initialDescription}) {
+  void _openPostFlow({JobCategoryEnum? category}) {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             settings: const RouteSettings(name: '/post-job'),
             builder: (context) => PostJobFlow(
-              initialDescription: initialDescription,
+              initialCategory: category,
               onJobPosted: () {
                 // The flow closes itself; show the new job in the Jobs tab
                 if (!mounted) return;
@@ -143,10 +138,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
+  /// "Good morning, Tendai" - time-aware, with the name when known.
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    final salutation = hour < 12
+        ? 'Good morning'
+        : hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+    final name = SessionManager.instance.displayName?.trim();
+    return name == null || name.isEmpty ? salutation : '$salutation, $name';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const GraftLogo(
           size: 24,
           color: GraftColors.white,
@@ -154,7 +162,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
+            icon: const Icon(Icons.notifications_none),
+            tooltip: 'Notifications',
             onPressed: () {
               // Notifications are planned for a later GRAFT release
               GraftSnackbar.showInfo(
@@ -166,143 +175,185 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.all(GraftSpacing.lg),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Greeting
-                      Text(
-                        'Hi there!',
-                        style: GraftTypography.displaySmall.copyWith(
-                          color: GraftColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: GraftSpacing.sm),
+        child: RefreshIndicator(
+          onRefresh: _loadMyJobs,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(GraftSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: GraftSpacing.sm),
 
-                      // Primary question
-                      Text(
-                        'What do you need done?',
-                        style: GraftTypography.headlineLarge.copyWith(
-                          color: GraftColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: GraftSpacing.lg),
-
-                      // Job description field - starts the post flow with it
-                      GraftTextField(
-                        controller: _descriptionController,
-                        hint: 'Describe your job...',
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: GraftSpacing.lg),
-
-                      // Post job button
-                      PrimaryButton(
-                        text: 'Post a Job',
-                        onPressed: () => _openPostFlow(
-                          initialDescription:
-                              _descriptionController.text.trim(),
-                        ),
-                        width: double.infinity,
-                      ),
-                      const SizedBox(height: GraftSpacing.xxxl),
-
-                      // Popular categories section
-                      Text(
-                        'Popular Categories',
-                        style: GraftTypography.headlineSmall.copyWith(
-                          color: GraftColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: GraftSpacing.lg),
-
-                      // Categories grid - scrollable for small screens
-                      SizedBox(
-                        height: 140,
-                        child: GridView.count(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: GraftSpacing.sm,
-                          mainAxisSpacing: GraftSpacing.sm,
-                          childAspectRatio: 0.9,
-                          children: _popularCategories.map((category) {
-                            return _CategoryCard(
-                              id: category['id'],
-                              name: category['name'],
-                              icon: category['icon'],
-                              onTap: () => _openPostFlow(),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: GraftSpacing.xxxl),
-
-                      // Recent/Active jobs section
-                      _JobsSection(
-                        title: 'Your Active Jobs',
-                        isLoading: _isLoadingJobs,
-                        jobs: _myJobs,
-                        onJobTap: _openJobDetail,
-                        onViewAll: widget.onViewAllJobs,
-                        onPostJob: () => _openPostFlow(),
-                      ),
-
-                      // Extra space to ensure scrollability
-                      const SizedBox(height: GraftSpacing.xxxl),
-                    ],
+                // Greeting
+                Text(
+                  _greeting,
+                  style: GraftTypography.displaySmall.copyWith(
+                    color: GraftColors.textPrimary,
                   ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: GraftSpacing.xs),
+
+                // Primary question
+                Text(
+                  'What do you need help with?',
+                  style: GraftTypography.headlineLarge.copyWith(
+                    color: GraftColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: GraftSpacing.xl),
+
+                // Primary actions
+                PrimaryButton(
+                  text: 'Post a Job',
+                  icon: Icons.add,
+                  onPressed: () => _openPostFlow(),
+                  width: double.infinity,
+                ),
+                const SizedBox(height: GraftSpacing.md),
+                SecondaryButton(
+                  text: 'Find a Worker',
+                  icon: Icons.search,
+                  onPressed: () {
+                    // Browsing workers by area arrives with marketplace
+                    // discovery in the next GRAFT release
+                    GraftSnackbar.showInfo(
+                      context,
+                      'Browsing workers near you will be available in the next GRAFT release.',
+                    );
+                  },
+                  width: double.infinity,
+                ),
+                const SizedBox(height: GraftSpacing.xxxxl),
+
+                // Popular categories - each opens the post flow pre-selected
+                Text(
+                  'Popular categories',
+                  style: GraftTypography.headlineSmall.copyWith(
+                    color: GraftColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: GraftSpacing.lg),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: GraftSpacing.sm,
+                  mainAxisSpacing: GraftSpacing.sm,
+                  childAspectRatio: 1.15,
+                  children: _homeCategories.map((category) {
+                    return _CategoryTile(
+                      label: category.label,
+                      icon: GraftCategoryIcons.forCategory(category.label),
+                      onTap: () => _openPostFlow(category: category),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: GraftSpacing.xxxxl),
+
+                // Active jobs
+                SectionHeader(
+                  title: 'Your active jobs',
+                  actionLabel:
+                      widget.onViewAllJobs != null && _myJobs.length > 2
+                          ? 'View all'
+                          : null,
+                  onAction: widget.onViewAllJobs,
+                ),
+                const SizedBox(height: GraftSpacing.md),
+
+                if (_isLoadingJobs)
+                  const SkeletonJobList(itemCount: 2)
+                else if (_hasError)
+                  InlineErrorState(
+                    title: "Couldn't load your jobs",
+                    description: 'Check your connection and try again.',
+                    onRetry: _loadMyJobs,
+                  )
+                else if (_myJobs.isEmpty)
+                  NoJobsCustomerEmptyState(onPostJob: () => _openPostFlow())
+                else
+                  ..._myJobs.map((job) => Padding(
+                        padding: const EdgeInsets.only(bottom: GraftSpacing.md),
+                        child: JobCard(
+                          title: job.title,
+                          category: job.category,
+                          description: job.description,
+                          area: job.location?.area ??
+                              job.location?.suburb ??
+                              job.location?.city,
+                          schedule: formatSchedule(
+                              job.preferredDate, job.preferredTime),
+                          budgetLabel: jobBudgetLabel(job),
+                          status: job.status,
+                          isNew: _isNew(job),
+                          onTap: () => _openJobDetail(job),
+                        ),
+                      )),
+
+                // Extra space so content clears the bottom bar comfortably
+                const SizedBox(height: GraftSpacing.xxxxl),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+
+  /// A job counts as new on the day it was posted
+  bool _isNew(Job job) =>
+      DateTime.now().difference(job.createdAt).inDays < 1;
 }
 
-/// Category card for popular categories
-class _CategoryCard extends StatelessWidget {
-  final String id;
-  final String name;
+/// The six categories most useful on the customer home. All categories
+/// remain available inside the post flow.
+const List<JobCategoryEnum> _homeCategories = [
+  JobCategoryEnum.plumbing,
+  JobCategoryEnum.cleaning,
+  JobCategoryEnum.electrical,
+  JobCategoryEnum.gardening,
+  JobCategoryEnum.handyman,
+  JobCategoryEnum.painting,
+];
+
+/// Category tile for the home grid
+class _CategoryTile extends StatelessWidget {
+  final String label;
   final IconData icon;
   final VoidCallback onTap;
 
-  const _CategoryCard({
-    required this.id,
-    required this.name,
+  const _CategoryTile({
+    required this.label,
     required this.icon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: GraftElevation.level1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(GraftBorderRadius.md),
-      ),
+    return Material(
+      color: GraftColors.surface,
+      borderRadius: BorderRadius.circular(GraftBorderRadius.md),
       child: InkWell(
         onTap: onTap,
-        child: Padding(
+        borderRadius: BorderRadius.circular(GraftBorderRadius.md),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(GraftBorderRadius.md),
+            border: Border.all(color: GraftColors.surfaceVariant),
+          ),
           padding: const EdgeInsets.all(GraftSpacing.md),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: GraftIcon.md, color: GraftColors.primary),
-              const SizedBox(height: GraftSpacing.xs),
+              Icon(icon, size: GraftIcon.lg, color: GraftColors.primary),
+              const SizedBox(height: GraftSpacing.sm),
               Text(
-                name,
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                   fontFamily: GraftTypography.systemFontFallback,
-                  fontSize: GraftIcon.xs,
+                  fontSize: GraftTypography.labelMediumFontSize,
+                  fontWeight: FontWeight.w500,
                   color: GraftColors.textPrimary,
                 ),
                 textAlign: TextAlign.center,
@@ -313,78 +364,6 @@ class _CategoryCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Jobs section widget for displaying the customer's real jobs
-class _JobsSection extends StatelessWidget {
-  final String title;
-  final bool isLoading;
-  final List<Job> jobs;
-  final void Function(Job job) onJobTap;
-  final VoidCallback? onViewAll;
-  final VoidCallback onPostJob;
-
-  const _JobsSection({
-    required this.title,
-    required this.isLoading,
-    required this.jobs,
-    required this.onJobTap,
-    this.onViewAll,
-    required this.onPostJob,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GraftTypography.headlineSmall.copyWith(
-            color: GraftColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: GraftSpacing.md),
-
-        // Loading, empty, or job cards
-        if (isLoading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(GraftSpacing.lg),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (jobs.isEmpty)
-          NoJobsCustomerEmptyState(
-            onPostJob: onPostJob,
-          )
-        else
-          ...jobs.map((job) {
-            return Column(
-              children: [
-                JobCard(
-                  title: job.title,
-                  category: job.category,
-                  area: job.location?.displayLocation ?? 'Location not set',
-                  budget: job.formattedBudget,
-                  status: job.status.label,
-                  onTap: () => onJobTap(job),
-                ),
-                const SizedBox(height: GraftSpacing.md),
-              ],
-            );
-          }),
-
-        // View all button
-        if (onViewAll != null && jobs.length > 2) ...[
-          TextButton(
-            onPressed: onViewAll,
-            child: const Text('View all jobs'),
-          ),
-        ],
-      ],
     );
   }
 }

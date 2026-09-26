@@ -27,6 +27,20 @@ class _PostJobLocationScreenState extends State<PostJobLocationScreen> {
   Location? _selectedLocation;
   final TextEditingController _locationController = TextEditingController();
 
+  /// Common Harare areas offered as one-tap choices. Manual entry is
+  /// always available for anywhere else in Zimbabwe.
+  static const List<String> _quickAreas = [
+    'Avondale',
+    'Belgravia',
+    'Borrowdale',
+    'Mbare',
+    'Highfield',
+    'Waterfalls',
+    'Mount Pleasant',
+    'Greendale',
+    'Chitungwiza',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -48,22 +62,17 @@ class _PostJobLocationScreenState extends State<PostJobLocationScreen> {
     }
   }
 
-  void _useCurrentLocation() {
-    // For MVP: simulate getting current location
-    // In production, use geolocator or similar package
+  void _selectQuickArea(String area) {
     setState(() {
-      _selectedLocation = const Location(
-        area: 'Current Area',
-        city: 'Harare',
-      );
-      _locationController.text = 'Current Area';
+      _selectedLocation = Location(area: area, city: 'Harare');
+      _locationController.text = area;
     });
   }
 
   void _onLocationChanged(String value) {
     setState(() {
       if (value.isNotEmpty) {
-        _selectedLocation = Location(area: value);
+        _selectedLocation = Location(area: value, city: 'Harare');
       } else {
         _selectedLocation = null;
       }
@@ -121,19 +130,32 @@ class _PostJobLocationScreenState extends State<PostJobLocationScreen> {
                   ),
                   const SizedBox(height: GraftSpacing.xl),
 
-                  // Current location button
-                  TextButton.icon(
-                    onPressed: _useCurrentLocation,
-                    icon: const Icon(Icons.my_location, size: GraftIcon.lg),
-                    label: const Text('Use Current Location'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: GraftColors.primary,
-                      textStyle: const TextStyle(
-                        fontFamily: GraftTypography.systemFontFallback,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  // Popular Harare areas as one-tap choices
+                  Text(
+                    'Popular areas in Harare',
+                    style: GraftTypography.labelLarge.copyWith(
+                      color: GraftColors.textSecondary,
                     ),
+                  ),
+                  const SizedBox(height: GraftSpacing.sm),
+                  Wrap(
+                    spacing: GraftSpacing.sm,
+                    runSpacing: GraftSpacing.sm,
+                    children: _quickAreas.map((area) {
+                      final isSelected = _selectedLocation?.area == area;
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Text(area),
+                        onSelected: (_) => _selectQuickArea(area),
+                        selectedColor:
+                            GraftColors.primary.withValues(alpha: 0.2),
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? GraftColors.primaryDark
+                              : GraftColors.textPrimary,
+                        ),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: GraftSpacing.lg),
 

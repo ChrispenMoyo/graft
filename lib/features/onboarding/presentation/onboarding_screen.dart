@@ -55,7 +55,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   padding: const EdgeInsets.only(top: GraftSpacing.xxxl),
                   child: const GraftLogo(
                     size: 60,
-                    color: GraftColors.primary,
                   ),
                 ),
               ),

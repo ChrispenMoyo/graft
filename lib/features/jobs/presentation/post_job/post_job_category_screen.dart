@@ -8,11 +8,14 @@ import '../../../../models/job_category.dart';
 
 /// Category selection screen for post job flow
 class PostJobCategoryScreen extends StatefulWidget {
+  /// Category already chosen before opening the flow (pre-selected)
+  final JobCategoryEnum? initialCategory;
   final void Function(JobCategoryEnum) onCategorySelected;
   final VoidCallback onBack;
 
   const PostJobCategoryScreen({
     super.key,
+    this.initialCategory,
     required this.onCategorySelected,
     required this.onBack,
   });
@@ -23,6 +26,12 @@ class PostJobCategoryScreen extends StatefulWidget {
 
 class _PostJobCategoryScreenState extends State<PostJobCategoryScreen> {
   JobCategoryEnum? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialCategory;
+  }
 
   void _onCategoryTap(JobCategoryEnum category) {
     setState(() {

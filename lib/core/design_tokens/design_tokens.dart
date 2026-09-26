@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 /// GRAFT Brand Colors
 class GraftColors {
   // Primary Brand Colors
-  static const Color primaryGreen = Color(0xFF319400); // Zimbabwe flag green
+  static const Color primaryGreen = Color(0xFF028E4B); // GRAFT brand green (logo artwork)
   static const Color zimbabweRed = Color(0xFFD40000);  // Zimbabwe flag red
   static const Color zimbabweYellow = Color(0xFFFFD200); // Zimbabwe flag yellow
   static const Color black = Color(0xFF000000);        // Zimbabwe flag black
@@ -18,8 +18,8 @@ class GraftColors {
 
   // Brand color variants
   static const Color primary = primaryGreen;
-  static const Color primaryDark = Color(0xFF2E7D32);
-  static const Color primaryLight = Color(0xFF4CAF50);
+  static const Color primaryDark = Color(0xFF016536);
+  static const Color primaryLight = Color(0xFF35B36B);
 
   // Accent colors
   static const Color secondary = zimbabweYellow; // Used for highlights/CTA
@@ -56,6 +56,10 @@ class GraftTypography {
   // Font families - Young Serif is primary brand font
   static const String brandFont = 'YoungSerif';
   static const String systemFontFallback = 'Poppins, Roboto, sans-serif';
+
+  // Numeric sizes for components that scale text at runtime
+  static const double labelSmallFontSize = 11;
+  static const double labelMediumFontSize = 12;
 
   // Display/Brand Headings (Young Serif)
   static const TextStyle displayLarge = TextStyle(

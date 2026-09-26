@@ -1,13 +1,16 @@
 // GRAFT Customer - Jobs List Screen
-// Shows all jobs for a customer, with ability to create new job
+// Shows all jobs for a customer, newest first, using the shared Job
+// Card. The empty state follows spec §14: what is empty, why, and what
+// to do next.
 
 import 'package:flutter/material.dart';
 import '../../../../../core/design_tokens/design_tokens.dart';
 import '../../../../../core/widgets/buttons.dart';
+import '../../../../../core/widgets/cards.dart';
+import '../../../../../core/widgets/job_visuals.dart';
 import '../../../../../models/job.dart';
 
 /// Customer jobs list screen
-/// Shows all jobs created by the customer
 class CustomerJobsScreen extends StatelessWidget {
   final String customerId;
   final List<Job> jobs;
@@ -29,26 +32,34 @@ class CustomerJobsScreen extends StatelessWidget {
         title: const Text('My Jobs'),
         leading: const SizedBox.shrink(),
       ),
-      body: Column(
-        children: [
-          // Jobs list
-          Expanded(
-            child: jobs.isEmpty
-                ? _buildEmptyState(context)
-                : ListView.builder(
-                    padding: const EdgeInsets.all(GraftSpacing.lg),
-                    itemCount: jobs.length,
-                    itemBuilder: (context, index) {
-                      final job = jobs[index];
-                      return _buildJobCard(context, job);
-                    },
+      body: jobs.isEmpty
+          ? _buildEmptyState(context)
+          : ListView.builder(
+              padding: const EdgeInsets.all(GraftSpacing.lg),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) {
+                final job = jobs[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: GraftSpacing.md),
+                  child: JobCard(
+                    title: job.title,
+                    category: job.category,
+                    description: job.description,
+                    area: job.location?.area ??
+                        job.location?.suburb ??
+                        job.location?.city,
+                    schedule:
+                        formatSchedule(job.preferredDate, job.preferredTime),
+                    budgetLabel: jobBudgetLabel(job),
+                    status: job.status,
+                    onTap: () => onJobTap(job),
                   ),
-          ),
-        ],
-      ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: onNewJob,
-        label: const Text('New Job'),
+        label: const Text('Post a Job'),
         icon: const Icon(Icons.add),
         backgroundColor: GraftColors.primary,
       ),
@@ -63,7 +74,7 @@ class CustomerJobsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.work_outlined,
+              Icons.work_outline,
               size: GraftIcon.xxl,
               color: GraftColors.textMuted,
             ),
@@ -71,80 +82,25 @@ class CustomerJobsScreen extends StatelessWidget {
             Text(
               'No jobs yet',
               style: GraftTypography.headlineSmall.copyWith(
-                color: GraftColors.textSecondary,
+                color: GraftColors.textPrimary,
               ),
             ),
-            const SizedBox(height: GraftSpacing.lg),
+            const SizedBox(height: GraftSpacing.md),
             Text(
-              'Create your first job to get started',
+              'Your jobs will appear here. Post your first job and start receiving offers.',
               style: GraftTypography.bodyMedium.copyWith(
-                color: GraftColors.textMuted,
+                color: GraftColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: GraftSpacing.lg),
+            const SizedBox(height: GraftSpacing.xl),
             PrimaryButton(
-              text: 'Create Job',
+              text: 'Post a Job',
               onPressed: onNewJob,
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildJobCard(BuildContext context, Job job) {
-    return Card(
-      elevation: GraftElevation.level1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(GraftBorderRadius.md),
-      ),
-      margin: const EdgeInsets.only(bottom: GraftSpacing.md),
-      child: ListTile(
-        onTap: () => onJobTap(job),
-        contentPadding: const EdgeInsets.all(GraftSpacing.lg),
-        leading: Container(
-          width: GraftIcon.lg * 1.5,
-          height: GraftIcon.lg * 1.5,
-          decoration: BoxDecoration(
-            color: GraftColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(GraftBorderRadius.md),
-          ),
-          child: const Icon(
-            Icons.work,
-            color: GraftColors.primary,
-            size: GraftIcon.md,
-          ),
-        ),
-        title: Text(
-          job.title,
-          style: GraftTypography.headlineSmall.copyWith(
-            color: job.status.isActive ? GraftColors.primary : GraftColors.textPrimary,
-          ),
-        ),
-        subtitle: Text(
-          '${JobStatus.values[job.status.index].label} • ${_formatDate(job.createdAt)}',
-          style: GraftTypography.bodySmall.copyWith(
-            color: GraftColors.textSecondary,
-          ),
-        ),
-        trailing: Chip(
-          label: Text(
-            job.status.label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          backgroundColor: job.status.isActive
-              ? GraftColors.primary.withValues(alpha: 0.1)
-              : GraftColors.success.withValues(alpha: 0.1),
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
   }
 }

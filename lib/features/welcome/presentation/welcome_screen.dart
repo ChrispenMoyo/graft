@@ -32,7 +32,6 @@ class WelcomeScreen extends StatelessWidget {
               // GRAFT Logo
               const GraftLogo(
                 size: 120,
-                color: GraftColors.primary,
               ),
               const SizedBox(height: GraftSpacing.xxxl),
 

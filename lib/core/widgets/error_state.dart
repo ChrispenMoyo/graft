@@ -68,3 +68,72 @@ class NetworkErrorAction extends StatelessWidget {
     );
   }
 }
+
+/// Compact, left-aligned error state for use inside a screen section
+/// (e.g. "Couldn't load nearby jobs" above the job list). Explains what
+/// went wrong and what the user can do, per spec §16.
+class InlineErrorState extends StatelessWidget {
+  final String title;
+  final String? description;
+  final VoidCallback? onRetry;
+  final String retryLabel;
+
+  const InlineErrorState({
+    super.key,
+    required this.title,
+    this.description,
+    this.onRetry,
+    this.retryLabel = 'Try Again',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(GraftSpacing.lg),
+      decoration: BoxDecoration(
+        color: GraftColors.error.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(GraftBorderRadius.md),
+        border: Border.all(color: GraftColors.error.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.wifi_off_outlined,
+            size: GraftIcon.lg,
+            color: GraftColors.error,
+          ),
+          const SizedBox(width: GraftSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GraftTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: GraftColors.textPrimary,
+                  ),
+                ),
+                if (description != null) ...[
+                  const SizedBox(height: GraftSpacing.xs),
+                  Text(
+                    description!,
+                    style: GraftTypography.bodySmall.copyWith(
+                      color: GraftColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              child: Text(retryLabel),
+            ),
+        ],
+      ),
+    );
+  }
+}

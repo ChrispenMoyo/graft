@@ -38,7 +38,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 4. Customer home
-    expect(find.text('What do you need done?'), findsOneWidget);
+    expect(find.text('What do you need help with?'), findsOneWidget);
 
     // 5. Open the Post Job flow (the primary button, not the empty-state CTA)
     await tester.tap(find.text('Post a Job').first);
@@ -89,7 +89,7 @@ void main() {
 
     // Review
     expect(find.text('Fix leaking kitchen tap'), findsOneWidget);
-    expect(find.text('Mbare'), findsOneWidget);
+    expect(find.textContaining('Mbare'), findsOneWidget);
     await tester.tap(find.text('Post Job'));
     await tester.pumpAndSettle();
 
@@ -102,6 +102,11 @@ void main() {
     expect(find.text('My Jobs'), findsOneWidget);
     expect(find.text('Fix leaking kitchen tap'), findsOneWidget);
 
+    // Let the "job posted" snackbar dismiss so it cannot intercept taps
+    // near the bottom of the screen
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
     // The job was really persisted
     final allJobs = await ServiceLocator.dataSource.getAllJobs();
     expect(allJobs.length, 1);
@@ -111,13 +116,21 @@ void main() {
     // 8. Sign out from the Profile tab
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
+    // The last ListView in the IndexedStack is the profile's (the jobs
+    // list also has one); scroll until Sign out is on screen.
+    await tester.dragUntilVisible(
+      find.text('Sign out'),
+      find.byType(ListView).last,
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
 
     // 9. Enter as Worker
     await tester.tap(find.text('Worker'));
     await tester.pumpAndSettle();
-    expect(find.text('What jobs can I do nearby?'), findsOneWidget);
+    expect(find.text('Looking for work near Harare'), findsOneWidget);
 
     // 10. Open the Jobs tab - the customer's job must be discoverable
     await tester.tap(find.text('Jobs'));
@@ -130,7 +143,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Description'), findsOneWidget);
     expect(find.text('Kitchen tap is leaking and needs repair.'), findsOneWidget);
-    expect(find.text('Mbare'), findsOneWidget);
+    expect(find.textContaining('Mbare'), findsOneWidget);
 
     // 12. Back returns to the jobs list
     await tester.pageBack();

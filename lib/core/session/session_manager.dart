@@ -12,6 +12,16 @@ class SessionManager {
   String? _workerId;
   UserRole? _role;
 
+  /// Display name shown in greetings and on the profile. Optional -
+  /// the user may never fill it in, and every screen must handle that.
+  String? _displayName;
+
+  /// Phone number captured at sign-in, e.g. "+263 771234567".
+  String? _phoneNumber;
+
+  /// When this session's account was created (used for "Member since").
+  DateTime? _joinedAt;
+
   SessionManager._();
 
   static SessionManager get instance {
@@ -24,6 +34,7 @@ class SessionManager {
     _customerId = customerId;
     _role = UserRole.customer;
     _workerId = null;
+    _joinedAt ??= DateTime.now();
   }
 
   /// Set the worker session
@@ -31,7 +42,25 @@ class SessionManager {
     _workerId = workerId;
     _role = UserRole.worker;
     _customerId = null;
+    _joinedAt ??= DateTime.now();
   }
+
+  /// Update profile details captured locally (name, phone).
+  /// This is session-scoped for now; syncing to an account comes with
+  /// the backend work in a later batch.
+  void updateProfile({String? displayName, String? phoneNumber}) {
+    if (displayName != null) _displayName = displayName;
+    if (phoneNumber != null) _phoneNumber = phoneNumber;
+  }
+
+  /// The user's display name, if they have set one
+  String? get displayName => _displayName;
+
+  /// The phone number captured at sign-in, if any
+  String? get phoneNumber => _phoneNumber;
+
+  /// When this account was created
+  DateTime get joinedAt => _joinedAt ??= DateTime.now();
 
   /// Get the current customer ID
   String get customerId {
@@ -64,5 +93,8 @@ class SessionManager {
     _customerId = null;
     _workerId = null;
     _role = null;
+    _displayName = null;
+    _phoneNumber = null;
+    _joinedAt = null;
   }
 }

@@ -1,13 +1,18 @@
 // GRAFT Customer - Job Detail Screen
-// Shows detailed information about a specific job
+// The customer's view of their own job (spec §6 + §19): the key facts,
+// the job lifecycle, and an honest offers section - comparing and
+// choosing workers arrives with the offers batch.
 
 import 'package:flutter/material.dart';
 import '../../../../../core/design_tokens/design_tokens.dart';
 import '../../../../../core/widgets/buttons.dart';
+import '../../../../../core/widgets/cards.dart';
+import '../../../../../core/widgets/detail_section.dart';
+import '../../../../../core/widgets/job_visuals.dart';
+import '../../../../../core/widgets/trust_components.dart';
 import '../../../../../models/job.dart';
 
 /// Customer job detail screen
-/// Shows detailed view of a single job
 class CustomerJobDetailScreen extends StatelessWidget {
   final Job job;
   final VoidCallback onBack;
@@ -33,12 +38,9 @@ class CustomerJobDetailScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit job',
             onPressed: onEdit,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () => _showDeleteDialog(context),
           ),
         ],
       ),
@@ -48,224 +50,142 @@ class CustomerJobDetailScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(GraftSpacing.lg),
               children: [
-                // Job title and status
+                // Category and status
+                Row(
+                  children: [
+                    CategoryChip(category: job.category),
+                    const Spacer(),
+                    JobStatusBadge(status: job.status),
+                  ],
+                ),
+                const SizedBox(height: GraftSpacing.md),
+
+                // Title
                 Text(
                   job.title,
-                  style: GraftTypography.headlineLarge.copyWith(
+                  style: GraftTypography.displaySmall.copyWith(
                     color: GraftColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: GraftSpacing.sm),
+                const SizedBox(height: GraftSpacing.lg),
 
-                Chip(
-                  label: Text(
-                    job.status.label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                // Budget highlight
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(GraftSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: GraftColors.primary.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(GraftBorderRadius.md),
+                    border: Border.all(
+                      color: GraftColors.primary.withValues(alpha: 0.18),
                     ),
                   ),
-                  backgroundColor: job.status.isActive
-                      ? GraftColors.primary.withValues(alpha: 0.1)
-                      : GraftColors.success.withValues(alpha: 0.1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'BUDGET',
+                        style: const TextStyle(
+                          fontFamily: GraftTypography.systemFontFallback,
+                          fontSize: GraftTypography.labelSmallFontSize,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: GraftColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: GraftSpacing.xs),
+                      Text(
+                        jobBudgetLabel(job),
+                        style: GraftTypography.headlineMedium.copyWith(
+                          color: GraftColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: GraftSpacing.xs),
+                      Text(
+                        job.pricingPreference.description,
+                        style: GraftTypography.bodySmall.copyWith(
+                          color: GraftColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: GraftSpacing.lg),
+                const SizedBox(height: GraftSpacing.md),
 
-                // Description section
-                _buildSection(
-                  context,
-                  icon: Icons.description,
-                  title: 'Description',
-                  child: Text(job.description),
-                ),
-
-                // Category section
-                _buildSection(
-                  context,
-                  icon: Icons.category,
-                  title: 'Category',
-                  child: Text(job.category),
-                ),
-
-                // Price section
-                _buildSection(
-                  context,
-                  icon: Icons.attach_money,
-                  title: 'Pricing',
-                  child: Text(job.formattedBudget),
-                ),
-
-                // Location section
-                _buildSection(
-                  context,
-                  icon: Icons.location_on,
+                // Location
+                DetailSection(
+                  icon: Icons.place_outlined,
                   title: 'Location',
-                  child: Text(job.location?.area ?? job.location?.city ?? 'Not specified'),
+                  child: Text(job.location?.displayLocation ?? 'Not specified'),
                 ),
 
-                // Schedule section
-                _buildSection(
-                  context,
-                  icon: Icons.calendar_today,
-                  title: 'Preferred Date',
+                // Schedule
+                if (formatSchedule(job.preferredDate, job.preferredTime) != null)
+                  DetailSection(
+                    icon: Icons.schedule_outlined,
+                    title: 'Schedule',
+                    child:
+                        Text(formatSchedule(job.preferredDate, job.preferredTime)!),
+                  ),
+
+                // Description
+                DetailSection(
+                  icon: Icons.description_outlined,
+                  title: 'Description',
                   child: Text(
-                    job.preferredDate != null
-                        ? '${job.preferredDate!.year}-${job.preferredDate!.month.toString().padLeft(2, '0')}-${job.preferredDate!.day.toString().padLeft(2, '0')}'
-                        : 'Not specified',
+                    job.description,
+                    style: GraftTypography.bodyMedium.copyWith(
+                      color: GraftColors.textPrimary,
+                      height: 1.5,
+                    ),
                   ),
                 ),
 
-                _buildSection(
-                  context,
-                  icon: Icons.access_time,
-                  title: 'Preferred Time',
-                  child: Text(
-                    job.preferredTime != null
-                        ? '${job.preferredTime!.hour.toString().padLeft(2, '0')}:${job.preferredTime!.minute.toString().padLeft(2, '0')}'
-                        : 'Not specified',
-                  ),
-                ),
+                // Photos - only rendered when the job has photos
+                if (job.photos.isNotEmpty) JobPhotoGallery(photos: job.photos),
 
-                // Timeline section
-                _buildSection(
-                  context,
+                // Offers - comparing and choosing workers arrives with the
+                // offers batch (spec §7). Honest until then.
+                SectionHeader(title: 'Offers'),
+                const SizedBox(height: GraftSpacing.md),
+                ComingSoonNote(
+                  message:
+                      'No offers yet. When workers near ${job.location?.area ?? 'you'} respond to your job, you will compare their offers and choose here.',
+                ),
+                const SizedBox(height: GraftSpacing.xl),
+
+                // Job lifecycle
+                DetailSection(
                   icon: Icons.timeline,
-                  title: 'Job Timeline',
-                  child: _buildTimeline(),
+                  title: 'Progress',
+                  child: _JobTimeline(status: job.status),
                 ),
 
-                // Created at
-                const SizedBox(height: GraftSpacing.lg),
-                Text(
-                  'Created: ${_formatDateTime(job.createdAt)}',
-                  style: GraftTypography.bodySmall.copyWith(
-                    color: GraftColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Action buttons
-          Padding(
-            padding: EdgeInsets.all(GraftSpacing.lg),
-            child: Column(
-              children: [
-                SecondaryButton(
-                  text: 'Edit Job',
-                  onPressed: onEdit,
-                  width: double.infinity,
-                ),
                 const SizedBox(height: GraftSpacing.sm),
-                DestructiveButton(
-                  text: 'Delete Job',
-                  onPressed: () => _showDeleteDialog(context),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required Widget child,
-  }) {
-    return Card(
-      elevation: GraftElevation.level1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(GraftBorderRadius.md),
-      ),
-      margin: const EdgeInsets.only(bottom: GraftSpacing.md),
-      child: Padding(
-        padding: const EdgeInsets.all(GraftSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: GraftIcon.md, color: GraftColors.primary),
-                const SizedBox(width: GraftSpacing.sm),
                 Text(
-                  title,
-                  style: GraftTypography.labelLarge.copyWith(
-                    color: GraftColors.textPrimary,
+                  'Created ${_formatDateTime(job.createdAt)}',
+                  style: GraftTypography.bodySmall.copyWith(
+                    color: GraftColors.textMuted,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: GraftSpacing.sm),
-            DefaultTextStyle(
-              style: GraftTypography.bodyMedium.copyWith(
-                color: GraftColors.textSecondary,
-              ),
-              child: child,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeline() {
-    final statuses = [
-      JobStatus.draft,
-      JobStatus.posted,
-      JobStatus.bidding,
-      JobStatus.workerSelected,
-      JobStatus.paymentPending,
-    ];
-
-    final titles = ['Created', 'Posted', 'Bidding', 'Worker Selected', 'Payment Pending'];
-    final icons = [Icons.add, Icons.publish, Icons.album, Icons.person, Icons.payment];
-
-    final int currentStepIndex;
-    int tempIndex = 0;
-    for (int i = 0; i < statuses.length; i++) {
-      if (statuses[i] == job.status) {
-        tempIndex = i;
-        break;
-      }
-    }
-    currentStepIndex = tempIndex;
-
-    return Column(
-      children: [
-        for (int i = 0; i < statuses.length; i++) ...[
-          Row(
-            children: [
-              Container(
-                width: GraftIcon.lg,
-                height: GraftIcon.lg,
-                decoration: BoxDecoration(
-                  color: i <= currentStepIndex ? GraftColors.primary : GraftColors.textMuted,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icons[i],
-                  size: GraftIcon.sm,
-                  color: GraftColors.white,
-                ),
-              ),
-              const SizedBox(width: GraftSpacing.md),
-              Expanded(
-                child: Text(
-                  titles[i],
-                  style: GraftTypography.bodyMedium.copyWith(
-                    color: i <= currentStepIndex ? GraftColors.textPrimary : GraftColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
           ),
-          if (i < statuses.length - 1)
-            const SizedBox(height: GraftSpacing.sm),
+
+          // Actions
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(GraftSpacing.lg),
+              child: DestructiveButton(
+                text: 'Delete Job',
+                onPressed: () => _showDeleteDialog(context),
+                width: double.infinity,
+              ),
+            ),
+          ),
         ],
-      ],
+      ),
     );
   }
 
@@ -278,7 +198,8 @@ class CustomerJobDetailScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Job?'),
-        content: const Text('This action cannot be undone. Are you sure you want to delete this job?'),
+        content: const Text(
+            'This action cannot be undone. Are you sure you want to delete this job?'),
         actions: [
           TextButton(
             onPressed: Navigator.of(context).pop,
@@ -293,6 +214,104 @@ class CustomerJobDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The customer-facing job lifecycle (spec §19). Later stages light up
+/// as the job moves through the marketplace.
+class _JobTimeline extends StatelessWidget {
+  final JobStatus status;
+
+  const _JobTimeline({required this.status});
+
+  static const _steps = [
+    (JobStatus.posted, 'Posted'),
+    (JobStatus.bidding, 'Receiving offers'),
+    (JobStatus.workerSelected, 'Worker selected'),
+    (JobStatus.workStarted, 'Work started'),
+    (JobStatus.completed, 'Completed'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Index of the furthest stage this status has reached
+    int currentIndex;
+    switch (status) {
+      case JobStatus.posted:
+        currentIndex = 0;
+        break;
+      case JobStatus.bidding:
+        currentIndex = 1;
+        break;
+      case JobStatus.workerSelected:
+      case JobStatus.paymentPending:
+      case JobStatus.paymentConfirmed:
+      case JobStatus.workerEnRoute:
+        currentIndex = 2;
+        break;
+      case JobStatus.workStarted:
+      case JobStatus.workCompleted:
+      case JobStatus.customerConfirmed:
+      case JobStatus.paymentReleased:
+        currentIndex = 3;
+        break;
+      case JobStatus.completed:
+        currentIndex = 4;
+        break;
+      default:
+        // Draft or a problem state - nothing has progressed yet
+        currentIndex = -1;
+    }
+
+    return Column(
+      children: [
+        for (int i = 0; i < _steps.length; i++) ...[
+          Row(
+            children: [
+              Container(
+                width: GraftIcon.md,
+                height: GraftIcon.md,
+                decoration: BoxDecoration(
+                  color: i <= currentIndex
+                      ? GraftColors.primary
+                      : GraftColors.surfaceVariant,
+                  shape: BoxShape.circle,
+                ),
+                child: i < currentIndex
+                    ? const Icon(
+                        Icons.check,
+                        size: 14,
+                        color: GraftColors.white,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: GraftSpacing.md),
+              Expanded(
+                child: Text(
+                  _steps[i].$2,
+                  style: GraftTypography.bodyMedium.copyWith(
+                    color: i <= currentIndex
+                        ? GraftColors.textPrimary
+                        : GraftColors.textMuted,
+                    fontWeight:
+                        i == currentIndex ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (i < _steps.length - 1)
+            Container(
+              margin: const EdgeInsets.only(left: 6),
+              width: 2,
+              height: 14,
+              color: i < currentIndex
+                  ? GraftColors.primary
+                  : GraftColors.surfaceVariant,
+            ),
+        ],
+      ],
     );
   }
 }

@@ -32,6 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Future.delayed(const Duration(seconds: 1), () {
         if (!mounted) return;
         setState(() => _isLoading = false);
+        // Keep the phone number so profiles can show real details
+        SessionManager.instance
+            .updateProfile(phoneNumber: '+263 ${_phoneController.text.trim()}');
         // Set customer session with a generated customer ID
         final customerId = 'customer_${DateTime.now().millisecondsSinceEpoch}';
         SessionManager.instance.setCustomerSession(customerId);
@@ -58,7 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
               // GRAFT Logo
               const GraftLogo(
                 size: 80,
-                color: GraftColors.primary,
               ),
               const SizedBox(height: GraftSpacing.xl),
 

@@ -1,19 +1,19 @@
 // GRAFT Customer Shell
 // Main application shell for customers with bottom navigation
-// Provides navigation between Home, Jobs, Post, and Profile
+// (spec §13): Home, Jobs, Messages and Profile, with the primary
+// "+ Post Job" action raised in the middle of the bar.
 
 import 'package:flutter/material.dart';
-import '../../../core/design_tokens/design_tokens.dart';
 import '../../../core/session/session_manager.dart';
-import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/graft_bottom_navigation.dart';
 import '../../../core/widgets/snackbar.dart';
 import '../../../features/customer_home/presentation/customer_home_screen.dart';
 import '../../../features/jobs/presentation/customer/customer_jobs_container.dart';
 import '../../../features/jobs/presentation/post_job/post_job_flow.dart';
+import '../../../features/messages/presentation/messages_screen.dart';
+import '../../../features/profile/presentation/customer_profile_screen.dart';
 
 /// Customer Shell with bottom navigation
-/// Provides the main navigation structure for customer functionality
 class CustomerShell extends StatefulWidget {
   const CustomerShell({super.key});
 
@@ -38,15 +38,28 @@ class _CustomerShellState extends State<CustomerShell> {
     });
   }
 
-  void _onJobPosted() {
-    // Return to home after posting and refresh data everywhere
-    if (mounted) {
-      setState(() {
-        _dataVersion++;
-        _selectedIndex = 0;
-      });
-      GraftSnackbar.showSuccess(context, 'Your job has been posted');
-    }
+  /// Opens the Post Job flow on top of the shell
+  void _openPostJob() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: '/post-job'),
+            builder: (context) => PostJobFlow(
+              onJobPosted: () {
+                if (!mounted) return;
+                GraftSnackbar.showSuccess(context, 'Your job has been posted');
+                setState(() {
+                  _dataVersion++;
+                  _selectedIndex = 1;
+                });
+              },
+            ),
+          ),
+        )
+        .then((_) {
+          // Data may have changed even when the flow was closed early
+          if (mounted) setState(() => _dataVersion++);
+        });
   }
 
   Widget _buildTab(int index) {
@@ -59,17 +72,17 @@ class _CustomerShellState extends State<CustomerShell> {
       case 1:
         return CustomerJobsContainer(
           key: ValueKey(_dataVersion),
-          onNewJob: () => _onItemTapped(2),
+          onNewJob: _openPostJob,
         );
       case 2:
-        // Post tab - shows the post job flow
-        return PostJobFlow(
-          onJobPosted: _onJobPosted,
+        return MessagesScreen(
+          isWorker: false,
+          onPostJob: _openPostJob,
         );
       case 3:
-        // Profile tab placeholder
-        return _ProfilePlaceholder(
+        return CustomerProfileScreen(
           onSignOut: _signOut,
+          dataVersion: _dataVersion,
         );
       default:
         return CustomerHomeScreen(
@@ -98,52 +111,7 @@ class _CustomerShellState extends State<CustomerShell> {
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemTapped,
         type: GraftNavigationType.customer,
-      ),
-    );
-  }
-}
-
-/// Profile placeholder screen for customer
-class _ProfilePlaceholder extends StatelessWidget {
-  final VoidCallback? onSignOut;
-
-  const _ProfilePlaceholder({
-    this.onSignOut,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(GraftSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline,
-              size: GraftIcon.xxl,
-              color: GraftColors.textMuted,
-            ),
-            const SizedBox(height: GraftSpacing.xl),
-            Text(
-              'Profile',
-              style: GraftTypography.headlineLarge,
-            ),
-            const SizedBox(height: GraftSpacing.lg),
-            Text(
-              'Profile and account settings will be available in a later GRAFT release.',
-              style: GraftTypography.bodyMedium.copyWith(
-                color: GraftColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: GraftSpacing.xl),
-            SecondaryButton(
-              text: 'Sign out',
-              onPressed: onSignOut,
-            ),
-          ],
-        ),
+        onCenterAction: _openPostJob,
       ),
     );
   }

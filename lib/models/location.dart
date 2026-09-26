@@ -81,9 +81,17 @@ class Location {
     return earthRadius * c;
   }
 
+  /// Human-readable location, most specific part first, e.g.
+  /// "Avondale, Harare" (spec §6). Duplicate parts are dropped.
   String get displayLocation {
-    final parts = [city, suburb, area, address].whereType<String>().where((s) => s.isNotEmpty);
-    return parts.isEmpty ? 'Location not specified' : parts.join(', ');
+    final parts = [area, suburb, city, address]
+        .whereType<String>()
+        .where((s) => s.isNotEmpty);
+    final unique = <String>[];
+    for (final part in parts) {
+      if (!unique.contains(part)) unique.add(part);
+    }
+    return unique.isEmpty ? 'Location not specified' : unique.join(', ');
   }
 
   @override

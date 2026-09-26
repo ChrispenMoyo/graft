@@ -8,7 +8,8 @@ import '../../../../core/design_tokens/design_tokens.dart';
 import '../../../../core/widgets/cards.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
-import '../../../../core/widgets/loading_state.dart';
+import '../../../../core/widgets/job_visuals.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../models/job.dart';
 import '../../../../models/job_category.dart';
 import '../../../../models/location.dart';
@@ -91,6 +92,7 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Nearby Jobs'),
         actions: [
           IconButton(
@@ -106,7 +108,20 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const LoadingState(message: 'Finding jobs near you...');
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(GraftSpacing.lg),
+        child: Column(
+          children: const [
+            SizedBox(height: GraftSpacing.sm),
+            SkeletonJobCard(),
+            SizedBox(height: GraftSpacing.md),
+            SkeletonJobCard(),
+            SizedBox(height: GraftSpacing.md),
+            SkeletonJobCard(),
+          ],
+        ),
+      );
     }
     if (_hasError) {
       return ErrorState(
@@ -152,9 +167,9 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
             child: _filteredJobs.isEmpty
                 ? ListView(
                     // Scrollable so the RefreshIndicator stays usable
-                    children: const [
-                      SizedBox(height: 120),
-                      NoJobsWorkerEmptyState(),
+                    children: [
+                      const SizedBox(height: 120),
+                      NoJobsWorkerEmptyState(onRefresh: _loadJobs),
                     ],
                   )
                 : ListView.builder(
@@ -167,10 +182,16 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
                         child: JobCard(
                           title: job.title,
                           category: job.category,
-                          area: job.location?.displayLocation ?? 'Location not set',
-                          distance: job.getDistanceFrom(_defaultWorkerLocation),
-                          budget: job.formattedBudget,
-                          status: job.status.label,
+                          description: job.description,
+                          area: job.location?.area ??
+                              job.location?.suburb ??
+                              job.location?.city,
+                          distanceKm:
+                              job.getDistanceFrom(_defaultWorkerLocation),
+                          schedule: formatSchedule(
+                              job.preferredDate, job.preferredTime),
+                          budgetLabel: jobBudgetLabel(job),
+                          status: job.status,
                           onTap: () => _openJob(job),
                         ),
                       );

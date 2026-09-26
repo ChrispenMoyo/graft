@@ -1,18 +1,17 @@
 // GRAFT Worker Shell
 // Main application shell for workers with bottom navigation
-// Provides navigation between Home, Jobs, Work, and Profile
+// (spec §13): Home, Jobs, Messages and Profile. The worker's primary
+// availability control lives on the Home screen.
 
 import 'package:flutter/material.dart';
-import '../../../core/design_tokens/design_tokens.dart';
 import '../../../core/session/session_manager.dart';
 import '../../../core/widgets/graft_bottom_navigation.dart';
-import '../../../core/widgets/snackbar.dart';
-import '../../../core/widgets/buttons.dart';
-import '../../../features/jobs/presentation/post_job/post_job_flow.dart';
 import '../../../features/jobs/presentation/worker/worker_jobs_screen.dart';
+import '../../../features/messages/presentation/messages_screen.dart';
+import '../../../features/profile/presentation/worker_profile_screen.dart';
 import '../../../features/worker_home/presentation/worker_home_screen.dart';
+
 /// Worker Shell with bottom navigation
-/// Provides the main navigation structure for worker functionality
 class WorkerShell extends StatefulWidget {
   const WorkerShell({super.key});
 
@@ -48,20 +47,12 @@ class _WorkerShellState extends State<WorkerShell> {
           key: ValueKey(_dataVersion),
         );
       case 2:
-        // Work tab - post a job CTA and active work
-        return _WorkTab(
-          onJobPosted: () {
-            if (mounted) {
-              setState(() {
-                _dataVersion++;
-                _selectedIndex = 1;
-              });
-              GraftSnackbar.showSuccess(context, 'Your job has been posted');
-            }
-          },
+        return MessagesScreen(
+          isWorker: true,
+          onFindWork: () => _onItemTapped(1),
         );
       case 3:
-        return _ProfilePlaceholder(
+        return WorkerProfileScreen(
           onSignOut: _signOut,
         );
       default:
@@ -91,118 +82,6 @@ class _WorkerShellState extends State<WorkerShell> {
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemTapped,
         type: GraftNavigationType.worker,
-      ),
-    );
-  }
-}
-
-/// Work tab for Worker with Post a Job CTA and active work
-class _WorkTab extends StatelessWidget {
-  final VoidCallback onJobPosted;
-
-  const _WorkTab({
-    required this.onJobPosted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Work'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(GraftSpacing.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.build_outlined,
-                size: GraftIcon.xxl,
-                color: GraftColors.textMuted,
-              ),
-              const SizedBox(height: GraftSpacing.xl),
-              Text(
-                'Your active work will appear here.',
-                style: GraftTypography.bodyMedium.copyWith(
-                  color: GraftColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: GraftSpacing.xl),
-              Text(
-                'Offering your services on a job is coming in a later GRAFT release.',
-                style: GraftTypography.bodySmall.copyWith(
-                  color: GraftColors.textMuted,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Spacer(),
-              PrimaryButton(
-                onPressed: () {
-                  // Open the shared PostJobFlow
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      settings: const RouteSettings(name: '/post-job'),
-                      builder: (context) => PostJobFlow.fromSession(
-                        onJobPosted: onJobPosted,
-                        role: 'Worker',
-                      ),
-                    ),
-                  );
-                },
-                text: 'Post a Job',
-              ),
-              const SizedBox(height: GraftSpacing.lg),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Profile placeholder for Worker
-class _ProfilePlaceholder extends StatelessWidget {
-  final VoidCallback? onSignOut;
-
-  const _ProfilePlaceholder({
-    this.onSignOut,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(GraftSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline,
-              size: GraftIcon.xxl,
-              color: GraftColors.textMuted,
-            ),
-            const SizedBox(height: GraftSpacing.xl),
-            Text(
-              'Profile',
-              style: GraftTypography.headlineLarge,
-            ),
-            const SizedBox(height: GraftSpacing.lg),
-            Text(
-              'Profile and account settings will be available in a later GRAFT release.',
-              style: GraftTypography.bodyMedium.copyWith(
-                color: GraftColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: GraftSpacing.xl),
-            SecondaryButton(
-              text: 'Sign out',
-              onPressed: onSignOut,
-            ),
-          ],
-        ),
       ),
     );
   }
